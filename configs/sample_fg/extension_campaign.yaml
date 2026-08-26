@@ -1,0 +1,91 @@
+schema_version: sample_fg.extension_campaign.v1
+
+# This machine received the source-only transfer without the outer Task 25--28
+# plan/manifest.  These cells encode the minimum-authority sequence retained in
+# AGENTS.md and the continuation prompt.  They do not authorize execution.
+protocol:
+  datasets:
+    dtd:
+      base_classes: 24
+    eurosat:
+      base_classes: 5
+  train_batch_size: 32
+  epochs: 200
+  precision: coop_fp16
+  optimizer: sgd
+  scheduler: cosine
+  full_gradient_micro_batch_size: 32
+  diagnostic_cadence: once_per_normal_epoch
+  periodic_refresh_origin: zero_based_step_0
+
+periodic_k_selection:
+  allowed_k: [2, 4, 8, 16]
+  pilot_k: 4
+  fallback_pair: [4, 16]
+  accuracy_selects_k: false
+  required_evidence:
+    - estimator_exact_cosine
+    - estimator_exact_relative_l2
+    - estimator_exact_log_norm_ratio
+    - exact_sweeps
+    - exact_gradient_wall_time
+    - training_wall_time
+    - stability_and_nonfinite_events
+  freeze_schema_version: sample_fg.periodic_k_freeze.v1
+
+tasks:
+  task25:
+    title: One-seed DTD pilot and Stage-1 reproduction campaign
+    experiment_id: R2
+    datasets: [dtd, eurosat]
+    shots: [16]
+    seeds: [1, 2, 3]
+    variants:
+      - {method: coop, estimator: none}
+      - {method: sam, estimator: none}
+      - {method: sample, estimator: ema}
+    execution_note: DTD is complete externally; EuroSAT status must be read from artifacts.
+
+  task26:
+    title: Estimator and mechanism pilot
+    experiment_id: E0
+    datasets: [dtd]
+    shots: [16]
+    seeds: [1]
+    variants:
+      - {method: sample, estimator: ema}
+      - {method: sample, estimator: exact}
+      - {method: sample, estimator: periodic, periodic_k_steps: 4}
+
+  task27:
+    title: Periodic estimator K-selection sweep
+    experiment_id: E1
+    datasets: [dtd]
+    shots: [16]
+    seeds: [1]
+    variants:
+      - {method: sample, estimator: periodic, periodic_k_steps: 2}
+      - {method: sample, estimator: periodic, periodic_k_steps: 4}
+      - {method: sample, estimator: periodic, periodic_k_steps: 8}
+      - {method: sample, estimator: periodic, periodic_k_steps: 16}
+
+  task28:
+    title: Confirmatory estimator campaign
+    experiment_id: E2
+    datasets: [dtd, eurosat]
+    shots: [16]
+    seeds: [1, 2, 3]
+    requires_periodic_k_freeze: true
+    variants:
+      - {method: sample, estimator: ema, reuse_experiment_id: R2}
+      - {method: sample, estimator: exact}
+      - {method: sample, estimator: periodic, periodic_k_steps: frozen}
+
+deferred_campaigns:
+  F0:
+    title: Few-shot 4/8/16 extension
+    status: blocked_pending_authoritative_shot_epoch_policy
+    datasets: [dtd, eurosat]
+    shots: [4, 8, 16]
+    seeds: [1, 2, 3]
+    note: AGENTS.md schedules F0 after E2; it is not silently folded into Task 28.

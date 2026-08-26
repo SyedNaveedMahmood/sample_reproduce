@@ -1,0 +1,81 @@
+schema_version: sample_fg.low_compute_config.v1
+title: "How Global Is SAMPLe's Global Gradient?"
+design_manifest: docs/low_compute_experiments/LOW_COMPUTE_EXPERIMENT_MANIFEST.yaml
+execution:
+  source_artifacts_read_only: true
+  optimizer_steps: 0
+  scheduler_steps: 0
+  non_dry_run_requires_explicit_execute: true
+paper_constants:
+  rho: 0.05
+  alpha: 0.0015
+  ema_lambda: 0.15
+common:
+  dataset: dtd
+  shots: 16
+  seed: 1
+  train_batch_size: 32
+  selected_examples: 384
+  checkpoint_target_fractions: [0.10, 0.30, 0.50, 0.70, 1.00]
+  checkpoint_target_epochs: [20, 60, 100, 140, 200]
+lc01:
+  lambda_grid: [0.0, 0.15, 0.3333333333333333, 0.6, 0.8461538461538461, 0.9, 0.95]
+  order_trials: 512
+  stationary_replay_epochs: 20
+  primary_materialization_replicates: 1
+  final_checkpoint_materialization_replicates: 3
+  optional_independent_exact_sweeps: 1
+  max_backward_batches: 96
+  optimizer_steps: 0
+  coverage_lambda: 0.8461538461538461
+lc02:
+  lambda_rule: "(B-1)/(B+1)"
+  dtd_steps_per_epoch_expected: 12
+  dtd_lambda_cov: 0.8461538461538461
+  source_epoch_preferred: 180
+  target_epoch: 200
+  max_remaining_epochs: 20
+  max_optimizer_steps: 240
+  estimator_state_transplant: state_preserving_ema_decay_switch_v1
+  requires_lc01_gate: true
+lc03:
+  reuse_lc01_gradient_banks: true
+  max_additional_displaced_backward_batches: 60
+  optimizer_steps: 0
+  scheduler_steps: 0
+  significance_testing: false
+lc04:
+  finite_difference_h: [0.0025, 0.005]
+  requires_eval_feature_cache: true
+  backward_batches: 0
+  optimizer_steps: 0
+lc05:
+  datasets: [dtd, eurosat]
+  seeds: [1, 2, 3]
+  methods: [coop, sam, sample_ema]
+  include_zero_shot_clip: true
+  neighbor_k_rule: "min(3,C-1)"
+  standard_eval_parity_tolerance_pct: 0.0001
+  optimizer_steps: 0
+  scheduler_steps: 0
+lc06:
+  radii: [0.0125, 0.025, 0.05]
+  random_directions: 32
+  direction_distribution: deterministic_rademacher_global_l2_normalize
+  metric_scope: fixed-materialization_prompt-space_sharpness
+  hessian_eigensolver_in_core_campaign: false
+  optimizer_steps: 0
+  scheduler_steps: 0
+lc07:
+  optional_confirmation_seed: 2
+  optional_confirmation_max_optimizer_steps: 240
+  total_new_optimizer_steps_cap: 480
+  replication_gate:
+    mechanism:
+      exact_cosine_absolute_improvement_min: 0.10
+      relative_l2_reduction_fraction_alternative_min: 0.20
+      gB_fidelity_must_not_worsen: true
+    outcome:
+      new_accuracy_gain_percentage_points_min: 2.0
+      hm_gain_percentage_points_min: 1.5
+      base_accuracy_drop_percentage_points_max: 1.5

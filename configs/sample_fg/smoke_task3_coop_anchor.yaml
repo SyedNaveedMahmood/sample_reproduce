@@ -1,0 +1,18 @@
+# Non-scientific Task-3 correctness smoke overrides.
+DATASET:
+  NUM_SHOTS: 4
+  SUBSAMPLE_CLASSES: "base"
+
+DATALOADER:
+  TRAIN_X:
+    BATCH_SIZE: 2
+  TEST:
+    BATCH_SIZE: 8
+  NUM_WORKERS: 0
+
+TRAINER:
+  COOP:
+    PREC: "fp32"
+
+TEST:
+  NO_TEST: True
